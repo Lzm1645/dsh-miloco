@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>米家设备 · DSH</title>
+<style>
+:root{
+  --bg:#0b1220;--panel:#111b2e;--panel-2:#152238;--line:#22314d;--text:#eef4ff;--muted:#8ea2bd;
+  --accent:#4da3ff;--accent-soft:rgba(77,163,255,.14);--ok:#3ddc97;--warn:#ffb020;--off:#5b6b80;
+  --radius:16px;--shadow:0 10px 30px rgba(0,0,0,.25)
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#16263f 0%,var(--bg) 55%) fixed;color:var(--text);font:15px/1.55 -apple-system,"PingFang SC","Segoe UI",system-ui,sans-serif}
+a{color:var(--accent)}
+.top{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1180px;margin:0 auto;padding:18px 26px;display:flex;align-items:center;gap:18px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#4da3ff,#7b61ff);display:grid;place-items:center;box-shadow:var(--shadow)}
+.logo svg{width:22px;height:22px}
+h1{font-size:17px;margin:0;letter-spacing:.01em}
+.sub{color:var(--muted);font-size:12.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.search{position:relative;flex:0 1 280px}
+.search input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);padding:9px 12px 9px 34px;outline:none;font-size:13.5px}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px rgba(61,220,151,.6)}
+.chip.warn .dot{background:var(--warn);box-shadow:none}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:9px 14px;font-size:13px}
+.btn:hover{border-color:#35507a}
+.btn.primary{background:var(--accent);border-color:transparent;color:#04121f;font-weight:650}
+main{max-width:1180px;margin:0 auto;padding:22px 26px 70px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 18px}
+.pill{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:7px 14px;font-size:13px}
+.pill.active{background:var(--accent-soft);border-color:rgba(77,163,255,.5);color:var(--text)}
+.banner{display:none;background:linear-gradient(180deg,#3a1d22,#2a1519);border:1px solid #7a3030;color:#ffb9b9;padding:12px 15px;border-radius:12px;margin-bottom:16px;font-size:13.5px}
+.banner.show{display:block}
+.room{margin:26px 0 0}
+.room-head{display:flex;align-items:baseline;gap:10px;margin:0 2px 10px}
+.room-head h2{font-size:14px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin:0}
+.room-head .count{font-size:12px;color:var(--off)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.tile{position:relative;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:15px;transition:transform .12s ease,border-color .12s ease;overflow:hidden}
+.tile:hover{transform:translateY(-1px);border-color:#2f4668}
+.tile.offline{opacity:.55}
+.tile .row1{display:flex;align-items:flex-start;gap:11px}
+.icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#1b2b45;color:var(--muted);flex:0 0 auto}
+.icon svg{width:20px;height:20px}
+.tile.on .icon{background:rgba(77,163,255,.16);color:var(--accent)}
+.tile .name{font-size:14.5px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tile .meta{font-size:12px;color:var(--muted);margin-top:3px}
+.state{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.tile.on .state{color:var(--accent)}
+.controls{display:flex;align-items:center;gap:10px;margin-top:14px}
+.switch{width:44px;height:25px;border-radius:999px;background:#26364f;border:1px solid #31456a;position:relative;padding:0;flex:0 0 auto}
+.switch i{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#c9d6e8;transition:.16s ease}
+.switch.on{background:var(--accent);border-color:transparent}
+.switch.on i{left:21px;background:#04121f}
+.slider{flex:1;display:flex;align-items:center;gap:8px}
+.slider input{width:100%;accent-color:var(--accent);height:18px}
+.slider .val{font-size:11.5px;color:var(--muted);min-width:30px;text-align:right}
+.hint{font-size:12px;color:var(--off);margin-top:10px}
+.empty{color:var(--muted);text-align:center;padding:60px 0;font-size:14px}
+.skeleton{height:118px;border-radius:var(--radius);background:linear-gradient(90deg,#131f34 25%,#182742 37%,#131f34 63%);background-size:400% 100%;animation:sk 1.2s ease infinite}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+@media (max-width:640px){.top-inner{padding:14px 16px;gap:10px}.search{display:none}h1{font-size:15px}main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="top-inner">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#04121f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9h13v-9"/><path d="M10 19v-5h4v5"/></svg></div>
+    <div><h1>米家设备</h1><div class="sub" id="sub">正在连接 Miloco…</div></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="搜索设备 / 房间"></div>
+  <span class="chip" id="health"><span class="dot"></span><span id="health-text">后端正常</span></span>
+  <button class="btn" id="refresh">刷新</button>
+</div></div>
+
+<main>
+  <div class="banner" id="banner"></div>
+  <div class="toolbar" id="rooms"></div>
+  <div id="content"></div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+const demo = new URLSearchParams(location.search).get('demo') === '1'
+const DEMO = {
+  home: '我的家（演示）',
+  devices: [
+    { did:'demo-1', name:'客厅吊灯', room:'客厅', category:'light', online:true, on:true, brightness:78 },
+    { did:'demo-2', name:'卧室台灯', room:'卧室', category:'light', online:true, on:false, brightness:40 },
+    { did:'demo-3', name:'空气净化器', room:'书房', category:'air-purifier', online:true, on:true, brightness:55 },
+    { did:'demo-4', name:'智能插座', room:'卧室', category:'outlet', online:true, on:false },
+    { did:'demo-5', name:'客厅电视', room:'客厅', category:'television', online:false },
+    { did:'demo-6', name:'小爱音箱', room:'书房', category:'speaker', online:true },
+    { did:'demo-7', name:'路由器', room:'客厅', category:'router', online:true },
+    { did:'demo-8', name:'体脂秤', room:'卧室', category:'scale', online:true }
+  ]
+}
+const ICONS = {
+  light:'<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5.9 1.2.9 2.1h5.2c0-.9.3-1.6.9-2.1A6 6 0 0 0 12 3Z"/>',
+  outlet:'<path d="M8 3v5"/><path d="M16 3v5"/><path d="M6 8h12v4a6 6 0 0 1-12 0V8Z"/><path d="M12 18v3"/>',
+  'air-purifier':'<path d="M4 8h11a3 3 0 1 0-3-3"/><path d="M4 12h15a3 3 0 1 1-3 3"/><path d="M4 16h7"/>',
+  television:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
+  speaker:'<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/>',
+  router:'<rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M11 17h.01"/><path d="M12 10a5 5 0 0 0-3.5 1.5"/><path d="M12 10a5 5 0 0 1 3.5 1.5"/><path d="M12 6a9 9 0 0 0-6.4 2.6"/><path d="M12 6a9 9 0 0 1 6.4 2.6"/>',
+  scale:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0"/><path d="M12 13v2"/>',
+  'occupancy-sensor':'<circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4"/><path d="M17.7 6.3a8 8 0 0 1 0 11.4"/>',
+  fitting:'<path d="M12 3v6"/><path d="M8 9h8l-1 12H9L8 9Z"/>',
+  default:'<circle cx="12" cy="12" r="8"/>'
+}
+const CONTROLLABLE = new Set(['light','outlet','air-purifier','television'])
+let all = [], activeRoom = '全部'
+
+function icon(category){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[category] || ICONS.default}</svg>` }
+function banner(msg){ const b=$('#banner'); b.textContent=msg; b.classList.toggle('show', !!msg) }
+function health(ok, text){ const el=$('#health'); el.classList.toggle('warn', !ok); $('#health-text').textContent=text }
+
+function render(){
+  const q = ($('#q').value || '').trim().toLowerCase()
+  const rooms = ['全部', ...new Set(all.map(d=>d.room||'其他'))]
+  $('#rooms').innerHTML = rooms.map(r=>`<button class="pill ${r===activeRoom?'active':''}" data-room="${esc(r)}">${esc(r)}</button>`).join('')
+  const visible = all.filter(d=> (activeRoom==='全部'|| (d.room||'其他')===activeRoom) && (!q || `${d.name} ${d.room} ${d.category}`.toLowerCase().includes(q)))
+  if (!visible.length){ $('#content').innerHTML = `<div class="empty">没有匹配的设备</div>`; return }
+  const byRoom = new Map()
+  for (const d of visible){ const r=d.room||'其他'; if(!byRoom.has(r)) byRoom.set(r,[]); byRoom.get(r).push(d) }
+  let html=''
+  for (const [room, list] of byRoom){
+    const online = list.filter(d=>d.online).length
+    html += `<section class="room"><div class="room-head"><h2>${esc(room)}</h2><span class="count">${online}/${list.length} 在线</span></div><div class="grid">`
+    html += list.map(tile).join('')
+    html += `</div></section>`
+  }
+  $('#content').innerHTML = html
+  bind()
+}
+
+function tile(d){
+  const controllable = d.online && CONTROLLABLE.has(d.category)
+  const state = !d.online ? '离线' : (CONTROLLABLE.has(d.category) ? (d.on ? '已开启' : '已关闭') : '在线')
+  return `<article class="tile ${d.online?'':'offline'} ${d.on?'on':''}" data-did="${esc(d.did)}">
+    <div class="row1">
+      <div class="icon">${icon(d.category)}</div>
+      <div style="min-width:0"><div class="name">${esc(d.name)}</div><div class="meta">${esc(d.category)}</div></div>
+      <div class="state">${state}</div>
+    </div>
+    ${controllable ? `<div class="controls">
+        <button class="switch ${d.on?'on':''}" data-act="toggle" aria-label="开关"><i></i></button>
+        ${(d.category==='light'||d.category==='air-purifier') ? `<div class="slider"><input type="range" min="1" max="100" value="${d.brightness ?? 60}" ${d.on?'':'disabled'}><span class="val">${d.brightness ?? 60}</span></div>` : ''}
+      </div>` : `<div class="hint">${d.online ? '该设备暂不支持快捷控制' : '设备离线，无法控制'}</div>`}
+  </article>`
+}
+
+function bind(){
+  document.querySelectorAll('.pill').forEach(b=> b.onclick=()=>{ activeRoom=b.dataset.room; render() })
+  document.querySelectorAll('.tile').forEach(el=>{
+    const d = all.find(x=>x.did===el.dataset.did)
+    const sw = el.querySelector('[data-act=toggle]')
+    if (sw) sw.onclick = async ()=>{ const next=!d.on; sw.classList.toggle('on',next); d.on=next; await control(d.did,'on',next); render() }
+    const input = el.querySelector('input[type=range]')
+    if (input){ const val = el.querySelector('.val'); input.oninput=()=>{ val.textContent=input.value }; input.onchange=()=>control(d.did,'brightness',Number(input.value)) }
+  })
+}
+
+async function control(did, spec, value){
+  if (demo) return
+  try{
+    const r = await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({did,spec,value,confirm:true})})
+    const data = await r.json()
+    if (!data.ok) throw new Error(data.error || '控制失败')
+  }catch(e){ banner(String(e.message||e)); setTimeout(()=>banner(''),5000) }
+}
+
+async function load(){
+  banner('')
+  if (demo){ all = DEMO.devices; $('#sub').textContent = `${DEMO.home} · ${all.length} 台设备（演示数据）`; health(true,'演示模式'); render(); return }
+  $('#content').innerHTML = '<div class="grid">'+Array.from({length:6}).map(()=>'<div class="skeleton"></div>').join('')+'</div>'
+  try{
+    const r = await fetch('/api/devices'); const data = await r.json()
+    if (!data.ok) throw new Error(data.error || '加载失败')
+    all = data.devices.map(d=>({...d, on:false, brightness:null}))
+    $('#sub').textContent = `${data.home || '米家'} · ${all.length} 台设备`
+    health(true,'后端正常'); render()
+    all.filter(d=>d.online && CONTROLLABLE.has(d.category)).slice(0,12).forEach(async d=>{
+      try{ const pr = await (await fetch('/api/props?did='+encodeURIComponent(d.did))).json()
+        for (const p of pr.props||[]){ if(p.spec_name==='on') d.on=p.value===true; if(p.spec_name==='brightness') d.brightness=p.value }
+        render()
+      }catch{}
+    })
+  }catch(e){ $('#sub').textContent='连接失败'; health(false,'后端异常'); banner(String(e.message||e)); $('#content').innerHTML='<div class="empty">无法连接 Miloco 后端</div>' }
+}
+
+$('#refresh').onclick = load
+$('#q').oninput = render
+load()
+</script>
+</body>
+</html>
