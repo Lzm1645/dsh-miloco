@@ -7,6 +7,9 @@ import { defineTool } from './lib/tool.js'
 import { runCli, parseJson } from './lib/cli.js'
 import { parseDeviceList, parseProps, formatDevices, formatProps } from './lib/parse.js'
 import { startUiServer } from './ui/server.js'
+import { startLogger, readEvents, patterns } from './lib/events.js'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 export const name = 'dsh-miloco'
 export const inject = []
@@ -14,6 +17,10 @@ export const inject = []
 const textOutput = {
   schema: { type: 'object', additionalProperties: false, properties: { ok: { type: 'boolean' }, text: { type: 'string' } } },
   render: (_args, value) => [{ type: 'text', text: value.text }],
+}
+
+function eventFile() {
+  return process.env.DSH_MILOCO_EVENTS || join(homedir(), '.dsh', 'state', 'dsh-miloco', 'events.jsonl')
 }
 
 async function listDevices() {
@@ -104,18 +111,56 @@ export function apply(ctx) {
   }))
 
   tools.register(defineTool({
+    name: 'miloco_events',
+    description: '读取最近的小米设备行为事件（开/关变化）。',
+    parameters: { limit: { type: 'number', description: '最多返回多少条，默认 100' } },
+    output: textOutput,
+    async execute(args) {
+      const rows = await readEvents(eventFile(), args?.limit || 100)
+      if (!rows.length) return { ok: true, text: '还没有行为记录（后台每 30 秒采样一次，设备状态变化后才会写入）。' }
+      return { ok: true, text: rows.map((e) => `${e.ts.slice(5, 16)} ${e.name}（${e.room}）${e.spec}: ${e.prev} → ${e.value}`).join('\n') }
+    },
+  }))
+
+  tools.register(defineTool({
+    name: 'miloco_patterns',
+    description: '根据行为日志总结设备使用模式，并给出自动化建议（例如每天几点开灯）。',
+    parameters: {},
+    output: textOutput,
+    async execute() {
+      const items = patterns(await readEvents(eventFile(), 5000))
+      if (!items.length) return { ok: true, text: '样本还不够（至少需要同一设备两次开机记录），再跑几天。' }
+      return { ok: true, text: items.map((i) => `${i.name}（${i.room}）：${i.suggestion}`).join('\n') }
+    },
+  }))
+
+  tools.register(defineTool({
     name: 'miloco_ui',
     description: '启动/获取米家设备控制面板地址（本地 Web UI）。',
     parameters: { port: { type: 'number', description: '可选端口，默认 5888' } },
     output: textOutput,
     async execute(args) {
       const port = Number(args?.port) || Number(process.env.DSH_MILOCO_UI_PORT) || 5888
-      const url = await startUiServer({ port, listDevices, props, control: (payload) => controlDevice(payload) })
+      const url = await startUiServer({
+        port,
+        listDevices,
+        props,
+        control: (payload) => controlDevice(payload),
+        events: (limit) => readEvents(eventFile(), limit),
+        patterns: async () => patterns(await readEvents(eventFile(), 5000)),
+      })
       return { ok: true, text: `控制面板已启动：${url}` }
     },
   }))
 
-  console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_devices、miloco_props、miloco_control、miloco_ui')
+  if (process.env.DSH_MILOCO_LOG !== '0') {
+    const interval = Math.max(10000, Number(process.env.DSH_MILOCO_LOG_INTERVAL_MS || 30000))
+    const dispose = startLogger({ listDevices, props: async (did) => props(did), file: eventFile(), intervalMs: interval,
+      log: (m) => console.warn('[dsh-miloco] ' + m) })
+    ctx.effect?.(() => dispose)
+  }
+
+  console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')
 }
 
 async function controlDevice({ did, spec, value, confirm }) {

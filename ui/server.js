@@ -20,7 +20,7 @@ async function readBody(req) {
   return raw ? JSON.parse(raw) : {}
 }
 
-export async function startUiServer({ port = 5888, listDevices, props, control }) {
+export async function startUiServer({ port = 5888, listDevices, props, control, events, patterns }) {
   if (current) return current.url
   const server = createServer(async (req, res) => {
     try {
@@ -40,6 +40,13 @@ export async function startUiServer({ port = 5888, listDevices, props, control }
         const did = url.searchParams.get('did') || ''
         const result = await props(did)
         return json(res, result.ok ? 200 : 502, { ok: result.ok, text: result.text, props: result.json?.data?.properties ?? [] })
+      }
+      if (req.method === 'GET' && url.pathname === '/api/events') {
+        const limit = Number(url.searchParams.get('limit') || 200)
+        return json(res, 200, { ok: true, events: events ? await events(limit) : [] })
+      }
+      if (req.method === 'GET' && url.pathname === '/api/patterns') {
+        return json(res, 200, { ok: true, patterns: patterns ? await patterns() : [] })
       }
       if (req.method === 'POST' && url.pathname === '/api/control') {
         const body = await readBody(req)

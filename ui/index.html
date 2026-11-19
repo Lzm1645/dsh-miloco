@@ -86,6 +86,12 @@ main{max-width:1180px;margin:0 auto;padding:22px 26px 70px}
   <div class="banner" id="banner"></div>
   <div class="toolbar" id="rooms"></div>
   <div id="content"></div>
+  <section id="insight" style="margin-top:34px;display:none">
+    <div class="room-head"><h2>智能建议</h2><span class="count">基于设备行为日志</span></div>
+    <div id="patterns" class="grid"></div>
+    <div class="room-head" style="margin-top:22px"><h2>最近行为</h2><span class="count">开关变化</span></div>
+    <div id="events" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.9"></div>
+  </section>
 </main>
 
 <script>
@@ -179,9 +185,34 @@ async function control(did, spec, value){
   }catch(e){ banner(String(e.message||e)); setTimeout(()=>banner(''),5000) }
 }
 
+async function loadInsight(){
+  if (demo){
+    $('#insight').style.display='block'
+    $('#patterns').innerHTML = [
+      {name:'客厅吊灯',room:'客厅',suggestion:'通常在 19:00 左右开灯（7 天里出现 6 次），可以设成定时自动开。'},
+      {name:'空气净化器',room:'书房',suggestion:'通常在 08:00 左右开启（7 天里出现 5 次），可跟随起床时间自动开。'}
+    ].map(p=>`<article class="tile"><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.room)}</div><div class="hint">${esc(p.suggestion)}</div></article>`).join('')
+    $('#events').textContent = '演示模式：接入后这里会显示「时间 设备 on: true → false」的开关记录。'
+    return
+  }
+  try{
+    const [pr, ev] = await Promise.all([fetch('/api/patterns').then(r=>r.json()), fetch('/api/events?limit=30').then(r=>r.json())])
+    const pats = pr.patterns || []
+    if (pats.length){
+      $('#insight').style.display='block'
+      $('#patterns').innerHTML = pats.map(p=>`<article class="tile on"><div class="row1"><div class="icon">${icon('light')}</div><div style="min-width:0"><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.room)} · 共 ${p.total} 次</div></div></div><div class="hint">${esc(p.suggestion)}</div></article>`).join('')
+    }
+    const rows = ev.events || []
+    if (rows.length){
+      $('#insight').style.display='block'
+      $('#events').innerHTML = rows.slice().reverse().map(e=>`<div>${esc(new Date(e.ts).toLocaleString('zh-CN',{hour12:false}))} · ${esc(e.name)} → ${e.value?'开':'关'}</div>`).join('')
+    }
+  }catch{}
+}
+
 async function load(){
   banner('')
-  if (demo){ all = DEMO.devices; $('#sub').textContent = `${DEMO.home} · ${all.length} 台设备（演示数据）`; health(true,'演示模式'); render(); return }
+  if (demo){ all = DEMO.devices; $('#sub').textContent = `${DEMO.home} · ${all.length} 台设备（演示数据）`; health(true,'演示模式'); render(); loadInsight(); return }
   $('#content').innerHTML = '<div class="grid">'+Array.from({length:6}).map(()=>'<div class="skeleton"></div>').join('')+'</div>'
   try{
     const r = await fetch('/api/devices'); const data = await r.json()
@@ -196,6 +227,7 @@ async function load(){
       }catch{}
     })
   }catch(e){ $('#sub').textContent='连接失败'; health(false,'后端异常'); banner(String(e.message||e)); $('#content').innerHTML='<div class="empty">无法连接 Miloco 后端</div>' }
+  loadInsight()
 }
 
 $('#refresh').onclick = load

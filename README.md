@@ -43,6 +43,8 @@ ln -sfn /path/to/dsh-miloco node_modules/dsh-miloco
 | `miloco_props` | 读取设备属性（on/brightness/color-temperature） |
 | `miloco_control` | 控制属性，**必须 `confirm=true`**，只允许 on/brightness/color-temperature/mode/toggle |
 | `miloco_ui` | 启动/获取本地控制面板 URL |
+| `miloco_events` | 最近的行为事件（开/关变化） |
+| `miloco_patterns` | 使用模式与自动化建议（如「每天 19:00 开灯」） |
 
 ## 安全边界
 
@@ -50,6 +52,19 @@ ln -sfn /path/to/dsh-miloco node_modules/dsh-miloco
 - 只允许白名单子命令与属性；
 - 控制必须显式 `confirm=true`；
 - UI 只监听 `127.0.0.1`，不对外暴露。
+
+## 行为日志与智能建议
+
+- 后台每 30 秒采样一次在线可控设备（灯/插座/净化器/电视）的 `on` 状态，状态变化写入 `~/.dsh/state/dsh-miloco/events.jsonl`；
+- `miloco_patterns` 按小时统计开机时间，给出「通常 19:00 开灯，可以设成定时自动开」这类建议；
+- 面板底部有「智能建议 / 最近行为」区块；
+- 环境变量：`DSH_MILOCO_LOG=0` 关闭采样，`DSH_MILOCO_LOG_INTERVAL_MS` 调整间隔，`DSH_MILOCO_EVENTS` 改事件文件路径。
+
+## DSH 客户端集成
+
+- 插件同时提供客户端半侧（`client.js`）：在 DSH 右侧栏注册「米家」标签页，内嵌本地面板；
+- `package.json` 已声明 `exports['./client']` 与 `dsh.client`（web 平台）；
+- 安装并重启 DSH 后，右侧栏会出现「米家」标签。
 
 ## UI 设计
 
