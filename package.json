@@ -1,7 +1,7 @@
 {
   "name": "dsh-miloco",
   "version": "0.1.0",
-  "description": "把小米 Miloco（米家）设备接入 DeepSeek Harness：工具 + 本地控制面板",
+  "description": "DeepSeek Harness 插件：基于本机 miloco-cli 的小米米家设备工具与本地控制面板（第三方集成，非小米官方）",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -44,5 +44,13 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test tests/*.test.mjs"
+  },
+  "homepage": "https://github.com/Lzm1645/dsh-miloco#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lzm1645/dsh-miloco.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lzm1645/dsh-miloco/issues"
   }
 }

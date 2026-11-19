@@ -1,0 +1,15 @@
+dsh-miloco
+==========
+
+本项目是 DeepSeek Harness（DSH）的第三方插件，通过本机安装的
+Xiaomi Miloco 命令行工具 `miloco-cli` 与米家设备交互。
+
+归属声明
+--------
+- Miloco / 米家（Mijia）及相关名称、标识归小米集团（Xiaomi Corporation）所有。
+- 上游项目：https://github.com/XiaoMi/xiaomi-miloco
+- 本项目与小米集团无隶属、赞助或官方背书关系。
+- 本项目不包含、不复制、不再分发 Miloco 的源代码；仅调用用户本机已安装的
+  `miloco-cli` 可执行文件。使用 Miloco 本身需遵守其自身的许可与使用条款。
+
+本项目自身代码以 MIT 许可发布（见 LICENSE）。
