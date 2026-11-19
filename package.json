@@ -1,6 +1,6 @@
 {
   "name": "dsh-miloco",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness 插件：基于本机 miloco-cli 的小米米家设备工具与本地控制面板（第三方集成，非小米官方）",
   "type": "module",
   "main": "index.js",
@@ -12,10 +12,12 @@
   },
   "files": [
     "index.js",
+    "client.js",
     "lib",
     "ui",
     "cordis.patch.yml",
     "README.md",
+    "NOTICE",
     "LICENSE"
   ],
   "keywords": [
