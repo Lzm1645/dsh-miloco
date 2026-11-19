@@ -1,5 +1,8 @@
 # dsh-miloco
 
+[![ci](https://github.com/Lzm1645/dsh-miloco/actions/workflows/ci.yml/badge.svg)](https://github.com/Lzm1645/dsh-miloco/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/Lzm1645/dsh-miloco)](https://github.com/Lzm1645/dsh-miloco/releases) [![license](https://img.shields.io/github/license/Lzm1645/dsh-miloco)](LICENSE)
+
+
 > 第三方集成：本项目通过本机 `miloco-cli` 调用 **Xiaomi Miloco（米家）**，与小米集团无隶属或官方背书关系；Miloco/米家名称与标识归小米所有。详见 [NOTICE](NOTICE)。
 
 ![控制面板](docs/screenshot.png)
