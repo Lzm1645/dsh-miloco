@@ -33,3 +33,18 @@ test('keeps escaped pipes in device names', () => {
   assert.equal(devices.length, 1)
   assert.deepEqual(devices[0], { did: '123', name: '客厅|主卧灯', room: '客厅', category: 'light', online: true })
 })
+
+test('handles trailing backslash + separator without dropping the device', () => {
+  const { devices } = parseDeviceList('d3|台灯\\\\|lobby|light|online\n')
+  assert.equal(devices.length, 1)
+  assert.equal(devices[0].name, '台灯\\')
+  assert.equal(devices[0].room, 'lobby')
+  assert.equal(devices[0].category, 'light')
+})
+
+test('reports skipped malformed rows via onSkip', () => {
+  const skipped = []
+  const { devices } = parseDeviceList('d5|坏行|light|online\n', { onSkip: (line) => skipped.push(line) })
+  assert.equal(devices.length, 0)
+  assert.deepEqual(skipped, ['d5|坏行|light|online'])
+})

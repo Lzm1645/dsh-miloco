@@ -73,6 +73,22 @@ export async function startUiServer({ port = 5888, listDevices, props, control, 
   const url = `http://127.0.0.1:${port}/`
   servers.set(port, { server, url })
   server.once('close', () => servers.delete(port))
+  server.unref()
   console.log(`[dsh-miloco] UI: ${url}`)
   return url
+}
+
+/**
+ * 关闭按端口启动的面板服务；未启动时静默返回。
+ * @param port - 要关闭的端口。
+ * @returns 关闭完成的 promise。
+ */
+export async function closeUiServer(port) {
+  const running = servers.get(port)
+  if (!running) return
+  servers.delete(port)
+  await new Promise((resolve) => {
+    running.server.close(() => resolve())
+    running.server.closeAllConnections?.()
+  })
 }

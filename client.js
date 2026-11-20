@@ -18,7 +18,7 @@
 
       const name = 'dsh-miloco'
       const inject = ['slots', 'sidebarRight', 'sidebarRightTabs']
-      const TAB_ID = 'miloco'
+      const TAB_ID = '@local/dsh-miloco'
       const KIND = 'miloco'
       const PANEL_URL = (typeof window !== 'undefined' && window.__DSH_MILOCO_UI__) || 'http://127.0.0.1:5888/'
 
@@ -63,14 +63,26 @@
           'dsh-miloco.body'
         )
 
-        // 3) 首次加载自动打开一次；用户手动关掉后不再打扰
+        // 3) 首次加载自动打开一次；用户手动关掉后不再打扰。
+        // openTab 需要已挂载的会话面板（ctx.sidebarRight.mounted），插件加载时通常还没有，
+        // 因此等到出现会话再开，并且只在成功打开后才写入标记。
         try {
           const key = 'dsh-miloco:auto-opened'
           if (window.localStorage?.getItem(key) !== '1') {
-            window.localStorage?.setItem(key, '1')
-            ctx.sidebarRight.openTab(KIND, { replaceTab: false })
+            const mounted = ctx.sidebarRight?.mounted
+            const attempt = () => {
+              if (mounted?.getSnapshot?.() === undefined) return false
+              ctx.sidebarRight.openTab(KIND, { replaceTab: false })
+              window.localStorage?.setItem(key, '1')
+              return true
+            }
+            if (!attempt()) {
+              const dispose = mounted?.subscribe?.(() => { if (attempt()) dispose?.() })
+            }
           }
-        } catch {}
+        } catch (error) {
+          console.warn('[dsh-miloco] 自动打开面板失败：' + (error?.message || error))
+        }
       }
 
       module.exports = { apply, inject, name }

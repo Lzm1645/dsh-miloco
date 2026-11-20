@@ -6,7 +6,7 @@
 import { defineTool } from './lib/tool.js'
 import { runCli, parseJson } from './lib/cli.js'
 import { parseDeviceList, parseProps, formatDevices, formatProps } from './lib/parse.js'
-import { startUiServer } from './ui/server.js'
+import { startUiServer, closeUiServer } from './ui/server.js'
 import { startLogger, readEvents, patterns } from './lib/events.js'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -161,16 +161,17 @@ export function apply(ctx) {
   }
 
   // 自动启动本地面板，避免用户先打开 tab 时拿到连接失败
-  if (process.env.DSH_MILOCO_UI !== '0') {
+  if (!['0', 'false', 'no', 'off'].includes(String(process.env.DSH_MILOCO_UI ?? '').toLowerCase())) {
     const port = Math.max(1024, Number(process.env.DSH_MILOCO_UI_PORT || 5888))
     startUiServer({
       port,
       listDevices,
       props: async (did) => props(did),
-      control: async (args) => control(args),
+      control: async (args) => controlDevice(args),
       events: (limit) => readEvents(eventFile(), limit),
       patterns: async () => patterns(await readEvents(eventFile(), 5000)),
-    }).catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
+    }).then((url) => ctx.effect?.(() => () => closeUiServer(port)))
+      .catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
   }
 
   console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')
