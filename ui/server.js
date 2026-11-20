@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-let current = null
+const servers = new Map()
 
 function json(res, status, body) {
   const data = JSON.stringify(body)
@@ -13,15 +13,19 @@ function json(res, status, body) {
   res.end(data)
 }
 
+class BadRequest extends Error {}
+
 async function readBody(req) {
   let raw = ''
   for await (const chunk of req) raw += chunk
-  if (raw.length > 32 * 1024) throw new Error('body too large')
-  return raw ? JSON.parse(raw) : {}
+  if (raw.length > 32 * 1024) throw new BadRequest('body too large')
+  if (!raw) return {}
+  try { return JSON.parse(raw) } catch { throw new BadRequest('invalid JSON body') }
 }
 
 export async function startUiServer({ port = 5888, listDevices, props, control, events, patterns }) {
-  if (current) return current.url
+  const running = servers.get(port)
+  if (running) return running.url
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1')
@@ -59,7 +63,7 @@ export async function startUiServer({ port = 5888, listDevices, props, control, 
       }
       json(res, 404, { ok: false, error: 'not found' })
     } catch (error) {
-      json(res, 500, { ok: false, error: String(error.message || error) })
+      json(res, error instanceof BadRequest ? 400 : 500, { ok: false, error: String(error.message || error) })
     }
   })
   await new Promise((resolve, reject) => {
@@ -67,7 +71,8 @@ export async function startUiServer({ port = 5888, listDevices, props, control, 
     server.listen(port, '127.0.0.1', resolve)
   })
   const url = `http://127.0.0.1:${port}/`
-  current = { server, url }
+  servers.set(port, { server, url })
+  server.once('close', () => servers.delete(port))
   console.log(`[dsh-miloco] UI: ${url}`)
   return url
 }

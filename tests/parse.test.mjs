@@ -26,3 +26,10 @@ test('command allowlist', () => {
 test('redact secrets', () => {
   assert.equal(redact('token=abc cookie=xyz'), '***=abc ***=xyz')
 })
+
+test('keeps escaped pipes in device names', () => {
+  const { home, devices } = parseDeviceList('# home=我的家\n123|客厅\\|主卧灯|客厅|light|online\n')
+  assert.equal(home, '我的家')
+  assert.equal(devices.length, 1)
+  assert.deepEqual(devices[0], { did: '123', name: '客厅|主卧灯', room: '客厅', category: 'light', online: true })
+})

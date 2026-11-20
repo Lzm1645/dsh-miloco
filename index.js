@@ -160,6 +160,19 @@ export function apply(ctx) {
     ctx.effect?.(() => dispose)
   }
 
+  // 自动启动本地面板，避免用户先打开 tab 时拿到连接失败
+  if (process.env.DSH_MILOCO_UI !== '0') {
+    const port = Math.max(1024, Number(process.env.DSH_MILOCO_UI_PORT || 5888))
+    startUiServer({
+      port,
+      listDevices,
+      props: async (did) => props(did),
+      control: async (args) => control(args),
+      events: (limit) => readEvents(eventFile(), limit),
+      patterns: async () => patterns(await readEvents(eventFile(), 5000)),
+    }).catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
+  }
+
   console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')
 }
 
