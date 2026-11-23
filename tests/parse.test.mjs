@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { parseDeviceList, parseProps, formatDevices } from '../lib/parse.js'
-import { buildArgs, redact } from '../lib/cli.js'
+import { buildArgs, redact, explainCliError } from '../lib/cli.js'
 
 test('parse device table', () => {
   const text = '# home=我的家\n# did|device_name|room|category|online\n117131735|台灯1|卧室|light|online\n2027403803|插座3|卧室|outlet|offline\n'
@@ -47,4 +47,10 @@ test('reports skipped malformed rows via onSkip', () => {
   const { devices } = parseDeviceList('d5|坏行|light|online\n', { onSkip: (line) => skipped.push(line) })
   assert.equal(devices.length, 0)
   assert.deepEqual(skipped, ['d5|坏行|light|online'])
+})
+
+test('explains missing CLI and stopped backend', () => {
+  assert.match(explainCliError('spawn miloco-cli ENOENT'), /没装 miloco-cli/)
+  assert.match(explainCliError('cannot connect to Miloco backend at http://127.0.0.1:1810'), /miloco-cli service start/)
+  assert.match(explainCliError('{"error":"cannot connect to Miloco backend at http://127.0.0.1:1810"}'), /后端没起/)
 })

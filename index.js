@@ -4,7 +4,7 @@
  * 依赖：本机已安装并登录 miloco-cli（后端服务运行中）。
  */
 import { defineTool } from './lib/tool.js'
-import { runCli, parseJson } from './lib/cli.js'
+import { runCli, parseJson, explainCliError, INSTALL_COMMAND } from './lib/cli.js'
 import { parseDeviceList, parseProps, formatDevices, formatProps } from './lib/parse.js'
 import { startUiServer, closeUiServer } from './ui/server.js'
 import { startLogger, readEvents, patterns } from './lib/events.js'
@@ -23,11 +23,37 @@ function eventFile() {
   return process.env.DSH_MILOCO_EVENTS || join(homedir(), '.dsh', 'state', 'dsh-miloco', 'events.jsonl')
 }
 
+const BACKEND_URL = process.env.DSH_MILOCO_BACKEND || 'http://127.0.0.1:1810'
+
+/** 直接探后端 /health，不依赖 `service status`（它看不见手工起的进程）。 */
+async function backendHealth() {
+  try {
+    const response = await fetch(BACKEND_URL.replace(/\/$/, '') + '/health', { signal: AbortSignal.timeout(2000) })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+async function isBound() {
+  const account = parseJson((await runCli(['account', 'status'])).stdout)
+  return account?.data?.is_bound === true
+}
+
 async function listDevices() {
   const result = await runCli(['device', 'list'])
-  if (!result.ok) return { ok: false, text: `设备列表获取失败：${result.stderr || result.stdout || '未知错误'}` }
-  const parsed = parseDeviceList(result.stdout)
-  return { ok: true, text: formatDevices(parsed), parsed }
+  if (!result.ok) {
+    const text = explainCliError(result.stderr || result.stdout, BACKEND_URL)
+    return { ok: false, text: `设备列表获取失败：${text}` }
+  }
+  const skipped = []
+  const parsed = parseDeviceList(result.stdout, { onSkip: (line) => skipped.push(line) })
+  if (skipped.length) console.warn('[dsh-miloco] 跳过无法解析的设备行：' + skipped.join(' | '))
+  if (parsed.devices.length === 0 && !(await isBound())) {
+    return { ok: true, text: '账号未绑定，所以没有设备。运行 `miloco-cli account bind` 扫码绑定小米账号。', parsed }
+  }
+  const note = skipped.length ? `\n（另有 ${skipped.length} 行无法解析，已跳过）` : ''
+  return { ok: true, text: formatDevices(parsed) + note, parsed }
 }
 
 async function props(did) {
@@ -54,15 +80,18 @@ export function apply(ctx) {
     parameters: {},
     output: textOutput,
     async execute() {
+      const version = await runCli(['version'])
+      const installed = version.ok || !/ENOENT/.test(version.stderr || '')
+      const health = installed ? await backendHealth() : false
       const account = await runCli(['account', 'status'])
-      const service = await runCli(['service', 'status'])
-      const lines = ['Miloco 状态']
       const accountJson = parseJson(account.stdout)
       const bound = accountJson?.data?.is_bound
+      const lines = ['Miloco 状态']
+      lines.push(`CLI：${installed ? '已安装' : '未安装'}`)
+      lines.push(`后端：${health ? '运行中（/health 200）' : '未运行'}`)
       lines.push(`账号：${bound === true ? '已绑定' : bound === false ? '未绑定' : '未知'}`)
-      const serviceJson = parseJson(service.stdout)
-      lines.push(`后端：${serviceJson?.running ? '运行中' : '未运行'}`)
-      if (!bound) lines.push('提示：运行 miloco-cli account bind 绑定小米账号')
+      if (!health) lines.push(`提示：启动后端 —— ${installed ? 'miloco-cli service start' : INSTALL_COMMAND}`)
+      if (bound !== true) lines.push('提示：绑定账号 —— miloco-cli account bind')
       return { ok: true, text: lines.join('\n') }
     },
   }))
@@ -135,6 +164,30 @@ export function apply(ctx) {
   }))
 
   tools.register(defineTool({
+    name: 'miloco_setup',
+    description: '检查 miloco-cli / 后端 / 账号绑定，给出下一步准确命令。',
+    parameters: {
+      install: { type: 'boolean', description: '为 true 时给出安装命令（不会自动执行）' },
+    },
+    output: textOutput,
+    async execute(args) {
+      const version = await runCli(['version'])
+      const installed = version.ok || !/ENOENT/.test(version.stderr || '')
+      const health = installed ? await backendHealth() : false
+      const bound = installed ? await isBound() : false
+      const steps = [
+        `1. miloco-cli：${installed ? '已安装' : '未安装'}`,
+        `2. 后端（${BACKEND_URL}）：${health ? '运行中' : '未运行'}`,
+        `3. 账号：${bound ? '已绑定' : '未绑定'}`,
+      ]
+      if (!installed) steps.push(`安装 CLI：\n  ${INSTALL_COMMAND}`)
+      if (installed && !health) steps.push('启动后端：\n  miloco-cli service start')
+      if (!bound) steps.push('绑定账号：\n  miloco-cli account bind（扫码，必须人工）')
+      return { ok: installed && health && bound, text: steps.join('\n') }
+    },
+  }))
+
+  tools.register(defineTool({
     name: 'miloco_ui',
     description: '启动/获取米家设备控制面板地址（本地 Web UI）。',
     parameters: { port: { type: 'number', description: '可选端口，默认 5888' } },
@@ -174,7 +227,7 @@ export function apply(ctx) {
       .catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
   }
 
-  console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')
+  console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_setup、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')
 }
 
 async function controlDevice({ did, spec, value, confirm }) {
