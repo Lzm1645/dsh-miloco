@@ -14,7 +14,9 @@
     factory: (require) => {
       const module = { exports: {} }
       const React = require('react')
-      const { jsx: h } = require('react/jsx-runtime')
+      // 必须用 createElement 的签名 (type, props, ...children)；
+      // react/jsx-runtime 的 jsx(type, props, key) 第三个参数是 key，传 children 会崩。
+      const h = React.createElement
 
       const name = 'dsh-miloco'
       const inject = ['slots', 'sidebarRight', 'sidebarRightTabs']
