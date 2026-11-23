@@ -208,7 +208,7 @@ export function apply(ctx) {
 
   if (process.env.DSH_MILOCO_LOG !== '0') {
     const interval = Math.max(10000, Number(process.env.DSH_MILOCO_LOG_INTERVAL_MS || 30000))
-    const dispose = startLogger({ listDevices, props: async (did) => props(did), file: eventFile(), intervalMs: interval,
+    const dispose = startLogger({ listDevices: async () => (await listDevices()).parsed ?? { devices: [] }, props: async (did) => parseProps((await props(did)).json), file: eventFile(), intervalMs: interval,
       log: (m) => console.warn('[dsh-miloco] ' + m) })
     ctx.effect?.(() => dispose)
   }
@@ -216,15 +216,15 @@ export function apply(ctx) {
   // 自动启动本地面板，避免用户先打开 tab 时拿到连接失败
   if (!['0', 'false', 'no', 'off'].includes(String(process.env.DSH_MILOCO_UI ?? '').toLowerCase())) {
     const port = Math.max(1024, Number(process.env.DSH_MILOCO_UI_PORT || 5888))
+    ctx.effect?.(() => () => { closeUiServer(port).catch(() => {}) })
     startUiServer({
       port,
-      listDevices,
+      listDevices: async () => listDevices(),
       props: async (did) => props(did),
-      control: async (args) => controlDevice(args),
+      control: (payload) => controlDevice(payload),
       events: (limit) => readEvents(eventFile(), limit),
       patterns: async () => patterns(await readEvents(eventFile(), 5000)),
-    }).then((url) => ctx.effect?.(() => () => closeUiServer(port)))
-      .catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
+    }).catch((error) => console.warn('[dsh-miloco] 面板启动失败：' + (error?.message || error)))
   }
 
   console.log('[dsh-miloco] 已注册工具：miloco_status、miloco_setup、miloco_devices、miloco_props、miloco_control、miloco_ui、miloco_events、miloco_patterns')

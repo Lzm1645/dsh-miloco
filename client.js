@@ -65,26 +65,8 @@
           'dsh-miloco.body'
         )
 
-        // 3) 首次加载自动打开一次；用户手动关掉后不再打扰。
-        // openTab 需要已挂载的会话面板（ctx.sidebarRight.mounted），插件加载时通常还没有，
-        // 因此等到出现会话再开，并且只在成功打开后才写入标记。
-        try {
-          const key = 'dsh-miloco:auto-opened'
-          if (window.localStorage?.getItem(key) !== '1') {
-            const mounted = ctx.sidebarRight?.mounted
-            const attempt = () => {
-              if (mounted?.getSnapshot?.() === undefined) return false
-              ctx.sidebarRight.openTab(KIND, { replaceTab: false })
-              window.localStorage?.setItem(key, '1')
-              return true
-            }
-            if (!attempt()) {
-              const dispose = mounted?.subscribe?.(() => { if (attempt()) dispose?.() })
-            }
-          }
-        } catch (error) {
-          console.warn('[dsh-miloco] 自动打开面板失败：' + (error?.message || error))
-        }
+        // 3) 不自动打开：没有活跃 session 时 openTab 会抛「no session surface is mounted」。
+        //    用户从右侧栏的「+」或 guide 入口打开即可。
       }
 
       module.exports = { apply, inject, name }
